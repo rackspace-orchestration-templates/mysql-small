@@ -31,13 +31,18 @@ parameters:
   parent_stack_id:
     type: string
     default: None
-  apache_default_domain:
+  mysql_slave_master:
     type: string
-    default: exmaple.com
-  master_server:
+  mysql_node_index:
     type: string
-  php_myadmin:
-    type: boolean
+  mysql_root_password:
+    type: string
+  mysql_slave_user:
+    type: string
+  mysql_slave_password:
+    type: string
+  mysql_role:
+    type: string
 resources:
   upload_role_config:
     type: OS::Heat::SoftwareConfig
@@ -50,19 +55,18 @@ resources:
         set -e
         git clone -b 'stable' --single-branch --progress https://github.com/rackspace-orchestration-templates/ansible-roles.git /etc/ansible/roles > $heat_outputs_path.results 2>&1
 
-  lamp_config:
+  mysql_config:
     type: OS::Heat::SoftwareConfig
     properties:
       group: ansible
       config: |
         ---
-        - name: Install and configure LAMP
+        - name: Install and configure MySQL
           hosts: localhost
           connection: local
           roles:
           - common
-          - apache
-          - php
+          - mysql
           - firewall
   deploy_roles:
     type: OS::Heat::SoftwareDeployment
@@ -71,23 +75,25 @@ resources:
       config:
         get_resource: upload_role_config
       server:
-        get_resource: lamp_server
-  deploy_lamp:
+        get_resource: mysql_server
+  deploy_mysql:
     type: OS::Heat::SoftwareDeployment
     depends_on: deploy_roles
     properties:
       signal_transport: TEMP_URL_SIGNAL
       input_values:
-        nginx_vhost_str: { get_param: apache_default_domain }
-        nginx_vhost_template: 'default_secondary'
-        nginx_vhost_lampmyadmin: { get_param: php_myadmin }
-        nginx_upstream_server: { get_param: master_server }
         tz: "America/Chicago"
+        mysql_slave_master: { get_param: mysql_slave_master }
+        mysql_node_index: { get_param: mysql_node_index }
+        mysql_root_password: { get_param: mysql_root_password }
+        mysql_slave_user: { get_param: mysql_slave_user }
+        mysql_slave_password: { get_param: mysql_slave_password}
+        mysql_role: { get_param: mysql_role }
       config:
-        get_resource: lamp_config
+        get_resource: mysql_config
       server:
-        get_resource: lamp_server
-  lamp_server:
+        get_resource: mysql_server
+  mysql_server:
     type: OS::Nova::Server
     properties:
       name: { get_param: "server_name" }
@@ -100,11 +106,11 @@ resources:
       metadata:
         rax-heat: { get_param: "parent_stack_id" }
         build_config: "monitoring_defaults"
-  lamp_server_http_check:
+  mysql_server_http_check:
     type: Rackspace::CloudMonitoring::Check
-    depends_on: deploy_lamp
+    depends_on: deploy_mysql
     properties:
-      entity: { get_resource: lamp_server }
+      entity: { get_resource: mysql_server }
       type: remote.http
       label:
         str_replace:
@@ -116,7 +122,7 @@ resources:
           str_replace:
             template: "http://ipaddr"
             params:
-              ipaddr: { get_attr: [lamp_server, accessIPv4] }
+              ipaddr: { get_attr: [mysql_server, accessIPv4] }
       metadata:
         rax-heat: { get_param: "OS::stack_id" }
         stack-name: { get_param: "OS::stack_name" }
@@ -127,15 +133,15 @@ resources:
       - Chicago (ORD)
       - Dallas Fort Worth (DFW)
       - London (LON)
-      target_hostname: { get_attr: [lamp_server, accessIPv4] }
+      target_hostname: { get_attr: [mysql_server, accessIPv4] }
       target_receiver: IPv4
 
 outputs:
   public_ip:
     description: Server Public IP
     value:
-      get_attr: [lamp_server, accessIPv4]
+      get_attr: [mysql_server, accessIPv4]
   private_ip:
     description: Server Private IP
     value:
-      get_attr: [lamp_server, networks, private, 0]
+      get_attr: [mysql_server, networks, private, 0]

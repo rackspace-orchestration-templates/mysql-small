@@ -248,29 +248,29 @@ resources:
 #      Frequency: "Weekly"
 #      VersionRetention: 30
   #Secondary Server
-#  mysql_secondary:
-#    type: OS::Heat::ResourceGroup
-#    properties:
-#      count: { get_param: server_count }
-#      resource_def:
-#        type: https://raw.githubusercontent.com/rackspace-orchestration-templates/mysql-small/master/mysql-small-secondary.yaml
-#        properties:
-#          ssh_key: { get_resource: ssh_key }
-#          parent_stack_id: { get_param: "OS::stack_id" }
-##          server_image: { get_param: server_image }
-#          server_image: da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
-#          server_flavor: { get_param: server_flavor }
-#          server_name:
-#            str_replace:
-#              template: stack-secondary-%index%
-#              params:
-#                stack: { get_param: "OS::stack_name" }
-#          mysql_slave_master: { get_attr: [mysql_server, networks, private, 0] }
-#          mysql_node_index: "%index%"
-#          mysql_root_password: { get_attr: [root_pass, value] }
-#          mysql_slave_user: mysql_slave
-#          mysql_slave_password: { get_attr: [slave_pass, value] }
-#          mysql_role: slave
+  mysql_secondary:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: server_count }
+      resource_def:
+        type: https://raw.githubusercontent.com/rackspace-orchestration-templates/mysql-small/master/mysql-small-secondary.yaml
+        properties:
+          ssh_key: { get_resource: ssh_key }
+          parent_stack_id: { get_param: "OS::stack_id" }
+#          server_image: { get_param: server_image }
+          server_image: da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
+          server_flavor: { get_param: server_flavor }
+          server_name:
+            str_replace:
+              template: stack-secondary-%index%
+              params:
+                stack: { get_param: "OS::stack_name" }
+          mysql_slave_master: { get_attr: [mysql_server, networks, private, 0] }
+          mysql_node_index: "%index%"
+          mysql_root_password: { get_attr: [root_pass, value] }
+          mysql_slave_user: mysql_slave
+          mysql_slave_password: { get_attr: [slave_pass, value] }
+          mysql_role: slave
 
 outputs:
 #  mysql_public_ip:
