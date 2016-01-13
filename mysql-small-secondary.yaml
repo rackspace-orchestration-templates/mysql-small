@@ -89,6 +89,7 @@ resources:
         mysql_slave_user: { get_param: mysql_slave_user }
         mysql_slave_password: { get_param: mysql_slave_password}
         mysql_role: { get_param: mysql_role }
+        firewall_global_rules: [ "0.0.0.0,0,22,tcp", "0.0.0.0,0,3306,tcp"]
       config:
         get_resource: mysql_config
       server:

@@ -2,7 +2,14 @@ heat_template_version: 2015-10-15
 
 description: |
  #### Production
+ Multiple Linux servers with [MySQL 5.6](http://www.mysql.com/) and
+ local database backups configured on the Master node with
+ [Holland](https://github.com/holland-backup/holland#readme).
 parameter_groups:
+  - label: MySQL Settings
+    parameters:
+    - mysql_user
+    - mysql_database
 parameters:
   #MySQL Customization
   #Advanced Options
@@ -17,9 +24,13 @@ parameters:
   mysql_user:
     type: string
     default: mysql_user
+    label: MySQL User
+    description: User to create within MySQL
   mysql_database:
     type: string
     default: mysql_db
+    label: MySQL Database
+    description: Database to create within MySQL.  User defined in "MySQL User" will have full access to this database
   server_flavor:
     type: string
     default: 4 GB General Purpose v1
@@ -130,6 +141,7 @@ resources:
         mysql_root_password: { get_attr: [root_pass, value] }
         mysql_slave_user: mysql_slave
         mysql_slave_password: { get_attr: [slave_pass, value] }
+        mysql_slave_nodes: { get_attr: [mysql_secondary, private_ip] }
       config:
         get_resource: mysql_config
       server:
@@ -141,7 +153,7 @@ resources:
       signal_transport: TEMP_URL_SIGNAL
       input_values:
         firewall_global_rules: [ "0.0.0.0,0,22,tcp", "0.0.0.0,0,3306,tcp"]
-#        firewall_nodes: { get_attr: [mysql_secondary, private_ip] }
+        firewall_nodes: { get_attr: [mysql_secondary, private_ip] }
         firewall_node_rules: ["32,3306,tcp"]
       config:
         get_resource: other_config
@@ -191,35 +203,6 @@ resources:
 #      - Dallas Fort Worth (DFW)
 #      - London (LON)
 #      target_hostname: { get_attr: [mysql_server, accessIPv4] }
-#      target_receiver: IPv4
-#  load_balancer_http_check:
-#    type: Rackspace::CloudMonitoring::Check
-#    depends_on: load_balancer
-#    properties:
-#      entity: { get_resource: mysql_server }
-#      type: remote.http
-#      label:
-#        str_replace:
-#          template: stack Load Balancer HTTP Check
-#          params:
-#            stack: { get_param: "OS::stack_name" }
-#      details:
-#        url:
-#          str_replace:
-#            template: "http://ipaddr"
-#            params:
-#              ipaddr: { get_attr: [load_balancer, PublicIp] }
-#      metadata:
-#        rax-heat: { get_param: "OS::stack_id" }
-#        stack-name: { get_param: "OS::stack_name" }
-#      period: 120
-#      timeout: 10
-#      monitoring_zones_poll:
-#      - Northern Virginia (IAD)
-#      - Chicago (ORD)
-#      - Dallas Fort Worth (DFW)
-#      - London (LON)
-#      target_hostname: { get_attr: [load_balancer, PublicIp] }
 #      target_receiver: IPv4
   #Cloud Backup
 #  mysql_backup:
@@ -273,14 +256,22 @@ resources:
           mysql_role: slave
 
 outputs:
-#  mysql_public_ip:
-#    description: Load Balancer IP
-#    value:
-#      get_attr: [load_balancer, PublicIp]
+  mysql_public_ip:
+    description: Load Balancer IP
+    value:
+      get_attr: [mysql_server, accessIPv4]
   mysql_password:
-    description: Database Password
+    description: MySQL Root Password
     value:
       get_attr: [root_pass, value]
+  mysql_user_password:
+    description: MySQL Password
+    value:
+      get_attr: [mysql_pass, value]
+  mysql_user:
+    description: MySQL User
+    value:
+      get_param: mysql_user
   ssh_private_key:
     description: SSH Private Key
     value:
@@ -289,7 +280,7 @@ outputs:
     description: Server Public IP
     value:
       get_attr: [mysql_server, accessIPv4]
-#  secondary_ips:
-#    description: Secondary Node IPs
-#    value:
-#      get_attr: [mysql_secondary, public_ip]
+  secondary_ips:
+    description: Secondary Node IPs
+    value:
+      get_attr: [mysql_secondary, public_ip]
