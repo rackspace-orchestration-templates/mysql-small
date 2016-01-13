@@ -1,0 +1,141 @@
+heat_template_version: 2015-10-15
+
+description: |
+ #### LAMP Secondary
+
+parameter_groups:
+
+parameters:
+  server_name:
+    type: string
+    default: example-0
+  server_flavor:
+    type: string
+    default: 4 GB General Purpose v1
+    constraints:
+    - allowed_values:
+      - 1 GB General Purpose v1
+      - 2 GB General Purpose v1
+      - 4 GB General Purpose v1
+      - 8 GB General Purpose v1
+  server_image:
+    type: string
+    default: da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
+    constraints:
+    - allowed_values:
+      - da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
+  ssh_key:
+    type: string
+    label: SSH Key
+    description: SSH Key for LAMP Slave Nodes
+  parent_stack_id:
+    type: string
+    default: None
+  apache_default_domain:
+    type: string
+    default: exmaple.com
+  master_server:
+    type: string
+  php_myadmin:
+    type: boolean
+resources:
+  upload_role_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      outputs:
+      - name: results
+      config: |
+        #!/bin/bash
+        set -e
+        git clone -b 'stable' --single-branch --progress https://github.com/rackspace-orchestration-templates/ansible-roles.git /etc/ansible/roles > $heat_outputs_path.results 2>&1
+
+  lamp_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ansible
+      config: |
+        ---
+        - name: Install and configure LAMP
+          hosts: localhost
+          connection: local
+          roles:
+          - common
+          - apache
+          - php
+          - firewall
+  deploy_roles:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      config:
+        get_resource: upload_role_config
+      server:
+        get_resource: lamp_server
+  deploy_lamp:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: deploy_roles
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      input_values:
+        nginx_vhost_str: { get_param: apache_default_domain }
+        nginx_vhost_template: 'default_secondary'
+        nginx_vhost_lampmyadmin: { get_param: php_myadmin }
+        nginx_upstream_server: { get_param: master_server }
+        tz: "America/Chicago"
+      config:
+        get_resource: lamp_config
+      server:
+        get_resource: lamp_server
+  lamp_server:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: "server_name" }
+      key_name: { get_param: "ssh_key" }
+      image: { get_param: server_image }
+      flavor: { get_param: server_flavor }
+      software_config_transport: POLL_TEMP_URL
+      config_drive: true
+      user_data_format: SOFTWARE_CONFIG
+      metadata:
+        rax-heat: { get_param: "parent_stack_id" }
+        build_config: "monitoring_defaults"
+  lamp_server_http_check:
+    type: Rackspace::CloudMonitoring::Check
+    depends_on: deploy_lamp
+    properties:
+      entity: { get_resource: lamp_server }
+      type: remote.http
+      label:
+        str_replace:
+          template: stack Node HTTP Check
+          params:
+            stack: { get_param: "OS::stack_name" }
+      details:
+        url:
+          str_replace:
+            template: "http://ipaddr"
+            params:
+              ipaddr: { get_attr: [lamp_server, accessIPv4] }
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        stack-name: { get_param: "OS::stack_name" }
+      period: 120
+      timeout: 10
+      monitoring_zones_poll:
+      - Northern Virginia (IAD)
+      - Chicago (ORD)
+      - Dallas Fort Worth (DFW)
+      - London (LON)
+      target_hostname: { get_attr: [lamp_server, accessIPv4] }
+      target_receiver: IPv4
+
+outputs:
+  public_ip:
+    description: Server Public IP
+    value:
+      get_attr: [lamp_server, accessIPv4]
+  private_ip:
+    description: Server Private IP
+    value:
+      get_attr: [lamp_server, networks, private, 0]

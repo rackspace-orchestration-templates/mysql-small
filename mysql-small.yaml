@@ -1,0 +1,295 @@
+heat_template_version: 2015-10-15
+
+description: |
+ #### Production
+parameter_groups:
+parameters:
+  #MySQL Customization
+  #Advanced Options
+#  server_image:
+#    type: string
+#    default: da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
+#    label: Server Image
+#    description: Image to be used for all servers in this stack
+#    constraints:
+#    - allowed_values:
+#      - da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
+  mysql_user:
+    type: string
+    default: mysql_user
+  mysql_database:
+    type: string
+    default: mysql_db
+  server_flavor:
+    type: string
+    default: 4 GB General Purpose v1
+    label: Server Flavor
+    description: Flavor of Cloud Server to be used for all servers in this stack
+    constraints:
+    - allowed_values:
+      - 1 GB General Purpose v1
+      - 2 GB General Purpose v1
+      - 4 GB General Purpose v1
+      - 8 GB General Purpose v1
+  server_count:
+    type: number
+    default: 0
+    label: Number of Secondary Servers
+    description: Number of secondary web nodes
+    constraints:
+      - range: { min: 0, max: 10 }
+
+resources:
+  #Passwords
+  root_pass:
+    type: OS::Heat::RandomString
+  holland_pass:
+    type: OS::Heat::RandomString
+  mysql_pass:
+    type: OS::Heat::RandomString
+  slave_pass:
+    type: OS::Heat::RandomString
+  #SSH Key
+  ssh_key:
+    type: OS::Nova::KeyPair
+    properties:
+      name: { get_param: "OS::stack_id" }
+      save_private_key: true
+  #Software Configurations
+  upload_role_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      outputs:
+      - name: results
+      config: |
+        #!/bin/bash
+        set -e
+        git clone -b 'stable' --single-branch --progress https://github.com/rackspace-orchestration-templates/ansible-roles.git /etc/ansible/roles > $heat_outputs_path.results 2>&1
+
+  mysql_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ansible
+      config: |
+        ---
+        - name: Install and configure LAMP
+          hosts: localhost
+          connection: local
+          roles:
+          - common
+          - mysql
+          - holland
+  other_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ansible
+      inputs:
+      - default: "[]"
+        name: lsync_dirs
+        type: CommaDelimitedList
+      - default: "[]"
+        name: lsync_servers
+        type: CommaDelimitedList
+      - default: "[]"
+        name: firewall_nodes
+        type: CommaDelimitedList
+      - default: "[]"
+        name: firewall_node_rules
+        type: CommaDelimitedList
+      config: |
+        ---
+        - name: Install and configure other things
+          hosts: localhost
+          connection: local
+          roles:
+          - firewall
+  deploy_roles:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      config:
+        get_resource: upload_role_config
+      server:
+        get_resource: mysql_server
+  deploy_mysql:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: deploy_roles
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      input_values:
+        tz: "America/Chicago"
+        holland_mysql_user: "holland"
+        holland_mysql_password: {  get_attr: [holland_pass, value] }
+        holland_mysql_host: "localhost"
+        holland_create_user: "no"
+        mysql_default_user: { get_param: mysql_user }
+        mysql_default_user_password: { get_attr: [mysql_pass, value] }
+        mysql_default_database: { get_param: mysql_database }
+        mysql_role: master
+        mysql_root_password: { get_attr: [root_pass, value] }
+        mysql_slave_user: mysql_slave
+        mysql_slave_password: { get_attr: [slave_pass, value] }
+      config:
+        get_resource: mysql_config
+      server:
+        get_resource: mysql_server
+  other_mysql:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: deploy_roles
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      input_values:
+        firewall_global_rules: [ "0.0.0.0,0,22,tcp", "0.0.0.0,0,3306,tcp"]
+#        firewall_nodes: { get_attr: [mysql_secondary, private_ip] }
+        firewall_node_rules: ["32,3306,tcp"]
+      config:
+        get_resource: other_config
+      server:
+        get_resource: mysql_server
+  #Master Server
+  mysql_server:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: "OS::stack_name" }
+#      image: { get_param: server_image }
+      image: da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2 
+      flavor: { get_param: server_flavor }
+      key_name: { get_resource: ssh_key }
+      software_config_transport: POLL_TEMP_URL
+      config_drive: true
+      user_data_format: SOFTWARE_CONFIG
+      metadata:
+        rax-heat: { get_param: "OS::stack_id" }
+        build_config: "backup_agent_only,monitoring_defaults"
+  #Monitoring Checks
+#  mysql_server_http_check:
+#    type: Rackspace::CloudMonitoring::Check
+#    depends_on: deploy_mysql
+#    properties:
+#      entity: { get_resource: mysql_server }
+#      type: remote.http
+#      label:
+#        str_replace:
+#          template: stack Master HTTP Check
+#          params:
+#            stack: { get_param: "OS::stack_name" }
+#      details:
+#        url:
+#          str_replace:
+#            template: "http://ipaddr"
+#            params:
+#              ipaddr: { get_attr: [mysql_server, accessIPv4] }
+#      metadata:
+#        rax-heat: { get_param: "OS::stack_id" }
+#        stack-name: { get_param: "OS::stack_name" }
+#      period: 120
+#      timeout: 10
+#      monitoring_zones_poll:
+#      - Northern Virginia (IAD)
+#      - Chicago (ORD)
+#      - Dallas Fort Worth (DFW)
+#      - London (LON)
+#      target_hostname: { get_attr: [mysql_server, accessIPv4] }
+#      target_receiver: IPv4
+#  load_balancer_http_check:
+#    type: Rackspace::CloudMonitoring::Check
+#    depends_on: load_balancer
+#    properties:
+#      entity: { get_resource: mysql_server }
+#      type: remote.http
+#      label:
+#        str_replace:
+#          template: stack Load Balancer HTTP Check
+#          params:
+#            stack: { get_param: "OS::stack_name" }
+#      details:
+#        url:
+#          str_replace:
+#            template: "http://ipaddr"
+#            params:
+#              ipaddr: { get_attr: [load_balancer, PublicIp] }
+#      metadata:
+#        rax-heat: { get_param: "OS::stack_id" }
+#        stack-name: { get_param: "OS::stack_name" }
+#      period: 120
+#      timeout: 10
+#      monitoring_zones_poll:
+#      - Northern Virginia (IAD)
+#      - Chicago (ORD)
+#      - Dallas Fort Worth (DFW)
+#      - London (LON)
+#      target_hostname: { get_attr: [load_balancer, PublicIp] }
+#      target_receiver: IPv4
+  #Cloud Backup
+#  mysql_backup:
+#    type: Rackspace::Cloud::BackupConfig
+#    depends_on: mysql_server
+#    properties:
+#      host_ip_address: { get_attr: [mysql_server, accessIPv4] }
+#      BackupConfigurationName:
+#        str_replace:
+#          template: stack Weekly Backup
+#          params:
+#            stack: { get_param: "OS::stack_name" }
+#      Inclusions:
+#      - FilePath: "/var/spool/holland"
+#        FileItemType: "Folder"
+#      - FilePath: "/var/www"
+#        FileItemType: "Folder"
+#      NotifyFailure: true
+#      NotifyRecipients: { get_param: backup_email }
+#      TimeZoneId: Central Standard Time
+#      StartTimeAmPm: AM
+#      StartTimeHour: 1
+#      StartTimeMinute: 0
+#      HourInterval: null
+#      DayOfWeekId: 0
+#      Frequency: "Weekly"
+#      VersionRetention: 30
+  #Secondary Server
+#  mysql_secondary:
+#    type: OS::Heat::ResourceGroup
+#    properties:
+#      count: { get_param: server_count }
+#      resource_def:
+#        type: https://raw.githubusercontent.com/rackspace-orchestration-templates/mysql-small/master/mysql-small-secondary.yaml
+#        properties:
+#          ssh_key: { get_resource: ssh_key }
+#          parent_stack_id: { get_param: "OS::stack_id" }
+##          server_image: { get_param: server_image }
+#          server_image: da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
+#          server_flavor: { get_param: server_flavor }
+#          server_name:
+#            str_replace:
+#              template: stack-secondary-%index%
+#              params:
+#                stack: { get_param: "OS::stack_name" }
+#          mysql_slave_master: { get_attr: [mysql_server, networks, private, 0] }
+#          mysql_node_index: "%index%"
+#          mysql_root_password: { get_attr: [root_pass, value] }
+#          mysql_slave_user: mysql_slave
+#          mysql_slave_password: { get_attr: [slave_pass, value] }
+#          mysql_role: slave
+
+outputs:
+#  mysql_public_ip:
+#    description: Load Balancer IP
+#    value:
+#      get_attr: [load_balancer, PublicIp]
+  mysql_password:
+    description: Database Password
+    value:
+      get_attr: [root_pass, value]
+  ssh_private_key:
+    description: SSH Private Key
+    value:
+      get_attr: [ssh_key, private_key]
+  server_ip:
+    description: Server Public IP
+    value:
+      get_attr: [mysql_server, accessIPv4]
+#  secondary_ips:
+#    description: Secondary Node IPs
+#    value:
+#      get_attr: [mysql_secondary, public_ip]
