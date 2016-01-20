@@ -20,10 +20,10 @@ parameters:
       - 8 GB General Purpose v1
   server_image:
     type: string
-    default: da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
+    default: f4bbbce2-50b0-4b07-bf09-96c175a45f4b
     constraints:
     - allowed_values:
-      - da1fc2aa-0dda-4adc-ac6a-b64e7dcddfd2
+      - f4bbbce2-50b0-4b07-bf09-96c175a45f4b
   ssh_key:
     type: string
     label: SSH Key
