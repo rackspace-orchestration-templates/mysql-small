@@ -21,6 +21,11 @@ instructions: |
   If you're new to MySQL, the [Manual](http://dev.mysql.com/doc/refman/5.6/en/index.html)
   documentation will step you through the basics of configuration, connecting,
   user, and  permission management.
+
+  By default, the "root" MySQL user can only connect from localhost (127.0.0.1).
+  You will need to connect to the server and use the MySQL client in order to
+  allow "root" to connect from external servers.
+
   As a part of your server configuration, your server will be configured to run
   nightly backups leveraging
   [Holland](https://github.com/holland-backup/holland#readme).  Backups will be
