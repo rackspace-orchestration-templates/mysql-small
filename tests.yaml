@@ -73,20 +73,3 @@ test-cases:
             disable_known_hosts: True
             use_ssh_config: True
             fabfile: test/fabric/mysql.py # Path to envassert test
-    - secondary_server:
-        fabric:
-          # Fabric environment settings to use while running envassert script
-          # http://docs.fabfile.org/en/latest/usage/env.html
-          env:
-            user: root
-            key_filename: tmp/private_key
-            hosts: { get_output: secondary_ips } # Fetch from output-list of stack
-            tasks:
-              - artifacts
-              - check
-            abort_on_prompts: True
-            connection_attempts: 3
-            disable_known_hosts: True
-            use_ssh_config: True
-            fabfile: test/fabric/mysql.py # Path to envassert test
-

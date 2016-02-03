@@ -43,6 +43,8 @@ instructions: |
   deployment.
 user-input-required: true
 description: |
-  Multiple Linux servers with [MySQL 5.6](http://www.mysql.com/) and
-  local database backups configured on the Master node with
-  [Holland](https://github.com/holland-backup/holland#readme).
+  #### Production
+
+  Multiple Linux servers with [MySQL 5.6](http://www.mysql.com/), configured in
+  a master-slave replication configuration, and local database backups
+  configured on the Master node with [Holland](https://github.com/holland-backup/holland#readme).

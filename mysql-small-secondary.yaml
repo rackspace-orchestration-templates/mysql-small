@@ -1,7 +1,7 @@
 heat_template_version: 2015-10-15
 
 description: |
- #### LAMP Secondary
+ #### MySQL Secondary
 
 parameter_groups:
 
