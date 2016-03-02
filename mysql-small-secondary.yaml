@@ -43,6 +43,12 @@ parameters:
     type: string
   mysql_role:
     type: string
+  ansible_branch:
+    type: string
+    default: stable
+  ansible_repo:
+    type: string
+    default: https://github.com/rackspace-orchestration-templates/ansible-roles.git
 resources:
   upload_role_config:
     type: OS::Heat::SoftwareConfig
@@ -50,10 +56,15 @@ resources:
       group: script
       outputs:
       - name: results
-      config: |
-        #!/bin/bash
-        set -e
-        git clone -b 'stable' --single-branch --progress https://github.com/rackspace-orchestration-templates/ansible-roles.git /etc/ansible/roles > $heat_outputs_path.results 2>&1
+      config:
+        str_replace:
+          template: |
+            #!/bin/bash
+            set -e
+            git clone -b 'tag' --single-branch --progress repository /etc/ansible/roles > $heat_outputs_path.results 2>&1
+          params:
+            tag: { get_param: ansible_branch}
+            repository: { get_param: ansible_repo }
 
   mysql_config:
     type: OS::Heat::SoftwareConfig
