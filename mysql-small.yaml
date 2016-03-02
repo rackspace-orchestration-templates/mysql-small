@@ -58,7 +58,7 @@ parameters:
       - f4bbbce2-50b0-4b07-bf09-96c175a45f4b
   secondary_template:
     type: string
-    default: https://raw.githubusercontent.com/rackspace-orchestration-templates/mysql-small/master/mysql-small-secondary.yaml
+    default: https://raw.githubusercontent.com/rackspace-orchestration-templates/mysql-small/stable/mysql-small-secondary.yaml
     label: Secondary Template
     description: Template to use for secondary servers
   ansible_branch:

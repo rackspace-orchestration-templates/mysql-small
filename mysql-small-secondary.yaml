@@ -118,35 +118,6 @@ resources:
       metadata:
         rax-heat: { get_param: "parent_stack_id" }
         build_config: "monitoring_defaults"
-  mysql_server_http_check:
-    type: Rackspace::CloudMonitoring::Check
-    depends_on: deploy_mysql
-    properties:
-      entity: { get_resource: mysql_server }
-      type: remote.http
-      label:
-        str_replace:
-          template: stack Node HTTP Check
-          params:
-            stack: { get_param: "OS::stack_name" }
-      details:
-        url:
-          str_replace:
-            template: "http://ipaddr"
-            params:
-              ipaddr: { get_attr: [mysql_server, accessIPv4] }
-      metadata:
-        rax-heat: { get_param: "OS::stack_id" }
-        stack-name: { get_param: "OS::stack_name" }
-      period: 120
-      timeout: 10
-      monitoring_zones_poll:
-      - Northern Virginia (IAD)
-      - Chicago (ORD)
-      - Dallas Fort Worth (DFW)
-      - London (LON)
-      target_hostname: { get_attr: [mysql_server, accessIPv4] }
-      target_receiver: IPv4
 
 outputs:
   public_ip:

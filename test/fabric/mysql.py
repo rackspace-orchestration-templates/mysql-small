@@ -33,4 +33,8 @@ def check():
 @task
 def artifacts():
   env.platform_family = detect.detect()
-  get_artifacts()
+  artifacts = ['/var/log/messages',
+              '/var/log/syslog',
+              '/var/log/cloud-init.log',
+              '/var/log/cloud-init-output.log']
+  get_artifacts(artifacts=artifacts)
