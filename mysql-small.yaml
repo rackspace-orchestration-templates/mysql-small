@@ -15,8 +15,7 @@ parameter_groups:
     parameters:
     - server_image
     - secondary_template
-    - ansible_branch
-    - ansible_repo
+    - ansible_source
 parameters:
   #MySQL Customization
   mysql_user:
@@ -58,19 +57,15 @@ parameters:
       - f4bbbce2-50b0-4b07-bf09-96c175a45f4b
   secondary_template:
     type: string
-    default: https://raw.githubusercontent.com/rackspace-orchestration-templates/mysql-small/stable/mysql-small-secondary.yaml
+    default: http://catalog.rs-heat.com/mysql-small/mysql-small-secondary.yaml
     label: Secondary Template
     description: Template to use for secondary servers
-  ansible_branch:
+  ansible_source:
     type: string
-    default: stable
-    label: Git Branch or Tag for Ansible Roles
-    description: The Ansible Roles will be pulled from Git, using the tag or branch provided
-  ansible_repo:
-    type: string
-    default: https://github.com/rackspace-orchestration-templates/ansible-roles.git
-    label: Git Repo for Ansible Roles
-    description: The Ansible Roles will be pulled from Git, using the repo provided
+    default: http://catalog.rs-heat.com/ansible-roles/ansible-roles.tar.gz
+    label: Ansible Tarball
+    description: The Ansible Roles will be pulled from the location provided
+    immutable: true
 
 resources:
   #Passwords
