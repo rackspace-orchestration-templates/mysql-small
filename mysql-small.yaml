@@ -219,8 +219,7 @@ resources:
           mysql_slave_user: mysql_slave
           mysql_slave_password: { get_attr: [slave_pass, value] }
           mysql_role: slave
-          ansible_branch: { get_param: ansible_branch}
-          ansible_repo: { get_param: ansible_repo }
+          ansible_source: { get_param: ansible_source}
 
 outputs:
   mysql_public_ip:
