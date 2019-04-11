@@ -4,9 +4,7 @@ description: |
   #### Production
 
   Multiple Linux servers with [MySQL 5.6](http://www.mysql.com/), configured in
-  a master-slave replication configuration, and local database backups
-  configured on the Master node with [Holland](https://github.com/holland-backup/holland#readme).
-parameter_groups:
+  a master-slave replication configuration.
   - label: MySQL Settings
     parameters:
     - mysql_user
@@ -48,12 +46,12 @@ parameters:
       - range: { min: 0, max: 10 }
   server_image:
     type: string
-    default: Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM) (Orchestration)
+    default: Ubuntu 16.04 LTS (Xenial Xerus) (PVHVM) (Orchestration)
     label: Server Image
     description: Image to be used for all servers in this stack
     constraints:
     - allowed_values:
-      - Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM) (Orchestration)
+      - Ubuntu 16.04 LTS (Xenial Xerus) (PVHVM) (Orchestration)
       - CentOS 7 (PVHVM) (Orchestration)
     immutable: true
   secondary_template:
@@ -71,8 +69,6 @@ parameters:
 resources:
   #Passwords
   root_pass:
-    type: OS::Heat::RandomString
-  holland_pass:
     type: OS::Heat::RandomString
   mysql_pass:
     type: OS::Heat::RandomString
@@ -114,7 +110,6 @@ resources:
           roles:
           - common
           - mysql
-          - holland
   other_config:
     type: OS::Heat::SoftwareConfig
     properties:
@@ -154,10 +149,6 @@ resources:
       signal_transport: TEMP_URL_SIGNAL
       input_values:
         tz: "America/Chicago"
-        holland_mysql_user: "holland"
-        holland_mysql_password: {  get_attr: [holland_pass, value] }
-        holland_mysql_host: "localhost"
-        holland_create_user: "no"
         mysql_default_user: { get_param: mysql_user }
         mysql_default_user_password: { get_attr: [mysql_pass, value] }
         mysql_default_database: { get_param: mysql_database }
