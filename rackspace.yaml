@@ -26,10 +26,6 @@ instructions: |
   You will need to connect to the server and use the MySQL client in order to
   allow "root" to connect from external servers.
 
-  As a part of your server configuration, your server will be configured to run
-  nightly backups leveraging
-  [Holland](https://github.com/holland-backup/holland#readme).  Backups will be
-  stored in the directory /var/lib/mysqlbackups directory on the master node.
   #### Logging in via SSH
   The private key provided in the passwords section can be used to login as
   root via SSH. We have an article on how to use these keys with [Mac OS X and
@@ -46,5 +42,4 @@ description: |
   #### Production
 
   Multiple Linux servers with [MySQL 5.6](http://www.mysql.com/), configured in
-  a master-slave replication configuration, and local database backups
-  configured on the Master node with [Holland](https://github.com/holland-backup/holland#readme).
+  a master-slave replication configuration.

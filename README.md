@@ -4,8 +4,7 @@ Description
 #### Production
 
 Multiple Linux servers with [MySQL 5.6](http://www.mysql.com/), configured in
-a master-slave replication configuration, and local database backups
-configured on the Master node with [Holland](https://github.com/holland-backup/holland#readme).
+a master-slave replication configuration.
 
 
 Instructions
@@ -72,12 +71,12 @@ Outputs
 Once a stack comes online, use `heat output-list` to see all available outputs.
 Use `heat output-show <OUTPUT NAME>` to get the value of a specific output.
 
-* `mysql_public_ip`: Master IP 
-* `mysql_password`: MySQL Root Password 
-* `mysql_user_password`: MySQL Password 
-* `mysql_user`: MySQL User 
-* `ssh_private_key`: SSH Private Key 
-* `secondary_ips`: Secondary Node IPs 
+* `mysql_public_ip`: Master IP
+* `mysql_password`: MySQL Root Password
+* `mysql_user_password`: MySQL Password
+* `mysql_user`: MySQL User
+* `ssh_private_key`: SSH Private Key
+* `secondary_ips`: Secondary Node IPs
 
 For multi-line values, the response will come in an escaped form. To get rid of
 the escapes, use `echo -e '<STRING>' > file.txt`. For vim users, a substitution
