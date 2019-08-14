@@ -4,8 +4,17 @@ description: |
  #### MySQL Secondary
 
 parameter_groups:
-
 parameters:
+  fail2ban:
+    type: boolean
+    default: true
+    label: fail2ban
+    description: Automatically install Fail2Ban
+  passauth:
+    type: boolean
+    default: false
+    label: passauth
+    description: Disable SSH password authentication
   server_name:
     type: string
     default: example-0
@@ -84,6 +93,7 @@ resources:
           - common
           - mysql
           - firewall
+          - fail2ban
   deploy_roles:
     type: OS::Heat::SoftwareDeployment
     properties:
@@ -106,6 +116,8 @@ resources:
         mysql_slave_password: { get_param: mysql_slave_password}
         mysql_role: { get_param: mysql_role }
         firewall_global_rules: [ "0.0.0.0,0,22,tcp", "0.0.0.0,0,3306,tcp"]
+        fail2ban_install: { get_param: fail2ban }
+        passauth: { get_param: passauth}
       config:
         get_resource: mysql_config
       server:

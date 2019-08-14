@@ -5,6 +5,7 @@ description: |
 
   Multiple Linux servers with [MySQL 5.6](http://www.mysql.com/), configured in
   a master-slave replication configuration.
+parameter_groups:
   - label: MySQL Settings
     parameters:
     - mysql_user
@@ -13,7 +14,22 @@ description: |
     parameters:
     - secondary_template
     - ansible_source
+  - label: Additional Security
+    parameters:
+    - passauth
+    - fail2ban
+
 parameters:
+  fail2ban:
+    type: boolean
+    default: true
+    label: Install fail2ban.
+    description: Automatically install Fail2Ban
+  passauth:
+    type: boolean
+    default: false
+    label: Disable password authentication.
+    description: Disable SSH password authentication
   #MySQL Customization
   mysql_user:
     type: string
@@ -110,6 +126,7 @@ resources:
           roles:
           - common
           - mysql
+          - fail2ban
   other_config:
     type: OS::Heat::SoftwareConfig
     properties:
@@ -157,6 +174,8 @@ resources:
         mysql_slave_user: mysql_slave
         mysql_slave_password: { get_attr: [slave_pass, value] }
         mysql_slave_nodes: { get_attr: [mysql_secondary, private_ip] }
+        fail2ban_install: { get_param: fail2ban }
+        passauth: { get_param: passauth}
       config:
         get_resource: mysql_config
       server:
